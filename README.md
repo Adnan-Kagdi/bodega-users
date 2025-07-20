@@ -1,4 +1,4 @@
-# 🛒 MERN Backend API - Auth, Products, Orders & User Profile
+# 🛒 Bodega Backend API
 
 This is a full-featured RESTful backend server built with **Node.js**, **Express**, and **MongoDB**. It supports:
 - 🔐 JWT-based User Authentication
