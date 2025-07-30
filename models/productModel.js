@@ -1,3 +1,5 @@
+
+
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -11,6 +13,11 @@ const productSchema = new mongoose.Schema({
     required: true,
   },
   category: String,
+  stock: {  // ✅ ADD THIS
+    type: Number,
+    required: true,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
