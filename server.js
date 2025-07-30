@@ -1,24 +1,25 @@
+// server.js
 const express = require('express');
-const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const userRoutes = require('./routes/userRoutes');
-
-dotenv.config();
 const app = express();
 
+// Middleware
 app.use(express.json());
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/user', userRoutes);
+// Dummy Routes (only include routes that don't require MongoDB)
+const cartRoutes = require('./routes/cartRoutes');
+const checkoutRoutes = require('./routes/checkoutRoutes');
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    app.listen(5000, () => console.log('Server running on port 5000'));
-  })
-  .catch(err => console.log(err));
+// Use your route files
+app.use('/cart', cartRoutes);
+app.use('/checkout', checkoutRoutes);
+
+// Test base route
+app.get('/', (req, res) => {
+  res.send('✅ Server is running without MongoDB');
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
