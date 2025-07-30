@@ -1,17 +1,22 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const authRoutes = require('./routes/auth');
-const app = express();
+const dotenv = require('dotenv');
+const orderRoutes = require('./routes/orderRoutes');
 
-// Middleware
+dotenv.config();
+
+const app = express();
 app.use(express.json());
 
-// ✅ Replace 'your_db_name' with actual DB name
-mongoose.connect('mongodb+srv://tejaswininaru138:wAzxVCdrWU0RK9qB@cluster0.9dyyal7.mongodb.net/')
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error(err));
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => console.log("MongoDB Connected"))
+  .catch(err => console.error("DB Error", err));
 
-app.use('/auth', authRoutes);
+app.use('/api/orders', orderRoutes); // prefix is /api/orders
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
