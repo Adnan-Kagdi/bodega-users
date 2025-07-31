@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const swaggerUi = require('swagger-ui-express');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
@@ -17,10 +18,13 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/user', userRoutes);
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+
+// mongoose.connect(process.env.MONGO_URI)
+//   .then(() => {
     app.listen(5000, () => console.log('Server running on port 5000'));
-  })
-  .catch(err => console.log(err));
+  // })
+  // .catch(err => console.log(err));
 
 
