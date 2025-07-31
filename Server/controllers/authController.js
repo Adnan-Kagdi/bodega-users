@@ -1,59 +1,59 @@
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/userModel');
+const User = require("../models/userModel");
+const jwt = require("jsonwebtoken");
+const sendOtp = require("../utils/sendOtp");
 
-require('dotenv').config();
+const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 exports.signup = async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
+  try {
+    const { firstName, lastName, phone } = req.body;
+    const userExists = await User.findOne({ phone });
 
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: 'All fields are required.' });
-        }
+    if (userExists) return res.status(400).json({ message: "User already exists" });
 
-        const existingUser = await User.findOne({email});
-        if (existingUser) {
-            return res.status(400).json({ message: 'User already exists.' });
-        }
+    const otp = generateOtp();
+    await sendOtp(phone, otp);
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ name, email, password: hashedPassword });
-        await newUser.save();
+    const user = await User.create({ firstName, lastName, phone, otp });
+    res.status(200).json({ message: "OTP sent successfully", userId: user._id });
+  } catch (err) {
+    res.status(500).json({ message: "Signup failed", error: err.message });
+  }
+};
 
-         const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET_KEY, {
-            expiresIn: '1d',
-        });
+exports.verifyOtp = async (req, res) => {
+  try {
+    const { userId, otp } = req.body;
+    const user = await User.findById(userId);
 
+    if (!user || user.otp !== otp) return res.status(400).json({ message: "Invalid OTP" });
 
-        res.status(201).json({ message: 'User created successfully.', token });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
+    user.isVerified = true;
+    user.otp = null;
+    await user.save();
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.status(200).json({ message: "OTP verified", token });
+  } catch (err) {
+    res.status(500).json({ message: "OTP verification failed", error: err.message });
+  }
 };
 
 exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
+    const { phone } = req.body;
+    const user = await User.findOne({ phone });
 
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required.' });
-        }
+    if (!user) return res.status(400).json({ message: "User not found" });
+    if (!user.isVerified) return res.status(400).json({ message: "User not verified" });
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
+    const otp = generateOtp();
+    user.otp = otp;
+    await user.save();
+    await sendOtp(phone, otp);
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: '1h' });
-
-        res.status(200).json({ token, user: { name: user.name, email: user.email } });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error });
-    }
+    res.status(200).json({ message: "OTP sent", userId: user._id });
+  } catch (err) {
+    res.status(500).json({ message: "Login failed", error: err.message });
+  }
 };
