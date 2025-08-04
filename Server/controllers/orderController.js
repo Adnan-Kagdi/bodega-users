@@ -19,28 +19,28 @@ exports.getOrder = async (req, res) => {
   }
 };
 
-exports.createOrder = async (req, res) => {
-  try {
-    const { customerName, product, quantity } = req.body;
+// exports.createOrder = async (req, res) => {
+//   try {
+//     const { customerName, product, quantity } = req.body;
 
-    if (!customerName || !product || !quantity) {
-      return res.status(400).json({
-        error: "All fields (customerName, product, quantity) are required.",
-      });
-    }
+//     if (!customerName || !product || !quantity) {
+//       return res.status(400).json({
+//         error: "All fields (customerName, product, quantity) are required.",
+//       });
+//     }
 
-    const newOrder = new Order({
-      customerName,
-      product,
-      quantity,
-    });
+//     const newOrder = new Order({
+//       customerName,
+//       product,
+//       quantity,
+//     });
 
-    const savedOrder = await newOrder.save();
-    res.status(201).json(savedOrder);
-  } catch (err) {
-    res.status(400).json({ error: "Failed to create order" });
-  }
-};
+//     const savedOrder = await newOrder.save();
+//     res.status(201).json(savedOrder);
+//   } catch (err) {
+//     res.status(400).json({ error: "Failed to create order" });
+//   }
+// };
 
 exports.updateOrder = async (req, res) => {
   try {
@@ -71,13 +71,24 @@ exports.updateOrder = async (req, res) => {
   }
 };
 
-exports.deleteOrder = async (req, res) => {
+exports.placeOrder = async (req, res) => {
   try {
-    const deleted = await Order.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Order not found" });
-    res.status(200).json({ message: "Order deleted successfully" });
+    const { items, totalAmount, paymentMethod, paymentDetails } = req.body;
+
+    const order = new Order({
+      user: req.user._id,
+      items,
+      totalAmount,
+      paymentMethod,
+      paymentStatus: "success",
+      paymentDetails
+    });
+
+    await order.save();
+    res.status(201).json({ message: "Order placed", order });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete order" });
+    console.error(err);
+    res.status(500).json({ message: "Order placement failed" });
   }
 };
 
@@ -110,3 +121,14 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+exports.deleteOrder = async (req, res) => {
+  try {
+    const deleted = await Order.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: "Order not found" });
+    res.status(200).json({ message: "Order deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to delete order" });
+  }
+};
+

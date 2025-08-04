@@ -6,7 +6,7 @@ exports.createRazorpayOrder = async (req, res) => {
   const { totalAmount, currency = "INR" } = req.body;
 
   const options = {
-    amount: totalAmount * 100, // INR to paise
+    amount: totalAmount * 100,
     currency,
     receipt: `order_rcptid_${Math.floor(Math.random() * 10000)}`,
   };
@@ -51,3 +51,21 @@ exports.verifyPayment = async (req, res) => {
     res.status(400).json({ success: false, message: "Invalid signature" });
   }
 };
+
+exports.markPaymentSuccess = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    order.paymentStatus = 'success';
+    order.orderStatus = 'processing';
+    await order.save();
+
+    res.json({ message: 'Payment successful, order updated', order });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
