@@ -1,41 +1,47 @@
 const User = require("../models/userModel");
-const jwt = require("jsonwebtoken");
-const sendOtp = require("../utils/sendOtp");
+const sendOTP = require("../utils/sendOTP");
 
-const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 exports.signup = async (req, res) => {
   try {
     const { firstName, lastName, phone } = req.body;
-    const userExists = await User.findOne({ phone });
 
-    if (userExists) return res.status(400).json({ message: "User already exists" });
+    let user = await User.findOne({ phone });
 
-    const otp = generateOtp();
-    await sendOtp(phone, otp);
+    const otp = generateOTP();
+    await sendOTP(phone, otp);
 
-    const user = await User.create({ firstName, lastName, phone, otp });
-    res.status(200).json({ message: "OTP sent successfully", userId: user._id });
-  } catch (err) {
-    res.status(500).json({ message: "Signup failed", error: err.message });
+    if (user) {
+      user.otp = otp;
+      await user.save();
+      return res.status(200).json({ message: "OTP sent again. Please verify." });
+    }
+
+    const newUser = await User.create({ firstName, lastName, phone, otp });
+    res.status(201).json({ message: "User registered. Please verify OTP." });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.verifyOtp = async (req, res) => {
+exports.verifyOTP = async (req, res) => {
   try {
-    const { userId, otp } = req.body;
-    const user = await User.findById(userId);
+    const { phone, otp } = req.body;
+    const user = await User.findOne({ phone });
 
-    if (!user || user.otp !== otp) return res.status(400).json({ message: "Invalid OTP" });
+    if (!user || user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP." });
+    }
 
     user.isVerified = true;
     user.otp = null;
     await user.save();
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.status(200).json({ message: "OTP verified", token });
-  } catch (err) {
-    res.status(500).json({ message: "OTP verification failed", error: err.message });
+    res.status(200).json({ message: "User verified successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -44,16 +50,34 @@ exports.login = async (req, res) => {
     const { phone } = req.body;
     const user = await User.findOne({ phone });
 
-    if (!user) return res.status(400).json({ message: "User not found" });
-    if (!user.isVerified) return res.status(400).json({ message: "User not verified" });
+    if (!user) return res.status(404).json({ message: "User not found." });
+    if (!user.isVerified) return res.status(403).json({ message: "User not verified." });
 
-    const otp = generateOtp();
+    const otp = generateOTP();
     user.otp = otp;
     await user.save();
-    await sendOtp(phone, otp);
+    await sendOTP(phone, otp);
 
-    res.status(200).json({ message: "OTP sent", userId: user._id });
-  } catch (err) {
-    res.status(500).json({ message: "Login failed", error: err.message });
+    res.status(200).json({ message: "OTP sent to login." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.verifyLoginOTP = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    const user = await User.findOne({ phone });
+
+    if (!user || user.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP." });
+    }
+
+    user.otp = null;
+    await user.save();
+
+    res.status(200).json({ message: "Logged in successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
