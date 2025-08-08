@@ -1,5 +1,4 @@
 const Order = require("../models/orderModel");
-const { emitOrderUpdate } = require("../socket");
 
 exports.listOrders = async (req, res) => {
   try {
@@ -86,13 +85,17 @@ exports.placeOrder = async (req, res) => {
     });
 
     await order.save();
-    emitOrderUpdate(order);
+
+    req.io.emit("orderUpdated", order);
+    // 🔥 emit to clients
+
     res.status(201).json({ message: "Order placed", order });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Order placement failed" });
   }
 };
+
 
 exports.updateOrderStatus = async (req, res) => {
   const { statusID } = req.params;
@@ -115,10 +118,12 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    req.io.emit("orderUpdated", updatedOrder);
+ // 🔥 emit update
+
     res
       .status(200)
       .json({ message: "Order status updated", order: updatedOrder });
-      emitOrderUpdate(updatedOrder);
 
   } catch (err) {
     console.error("Error updating order status:", err);
