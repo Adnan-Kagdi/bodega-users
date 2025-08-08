@@ -1,4 +1,5 @@
 const Order = require("../models/orderModel");
+const { emitOrderUpdate } = require("../socket");
 
 exports.listOrders = async (req, res) => {
   try {
@@ -85,6 +86,7 @@ exports.placeOrder = async (req, res) => {
     });
 
     await order.save();
+    emitOrderUpdate(order);
     res.status(201).json({ message: "Order placed", order });
   } catch (err) {
     console.error(err);
@@ -116,6 +118,8 @@ exports.updateOrderStatus = async (req, res) => {
     res
       .status(200)
       .json({ message: "Order status updated", order: updatedOrder });
+      emitOrderUpdate(updatedOrder);
+
   } catch (err) {
     console.error("Error updating order status:", err);
     res.status(500).json({ error: "Server error" });
@@ -131,4 +135,3 @@ exports.deleteOrder = async (req, res) => {
     res.status(500).json({ error: "Failed to delete order" });
   }
 };
-
